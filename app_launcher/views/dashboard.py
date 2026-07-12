@@ -162,6 +162,16 @@ class DashboardWindow(QMainWindow):
         self.btn_toggle_fs.setFixedSize(160, 35)
         self.btn_toggle_fs.clicked.connect(self.toggle_fullscreen)
 
+        self.btn_reboot = QPushButton("Reiniciar")
+        self.btn_reboot.setFocusPolicy(Qt.StrongFocus)
+        self.btn_reboot.setFixedSize(160, 35)
+        self.btn_reboot.clicked.connect(self.handle_reboot)
+
+        self.btn_poweroff = QPushButton("Apagar")
+        self.btn_poweroff.setFocusPolicy(Qt.StrongFocus)
+        self.btn_poweroff.setFixedSize(160, 35)
+        self.btn_poweroff.clicked.connect(self.handle_poweroff)
+
         self.btn_exit = QPushButton("✕ Salir")
         self.btn_exit.setObjectName("CloseButton")
         self.btn_exit.setFocusPolicy(Qt.StrongFocus)
@@ -171,12 +181,16 @@ class DashboardWindow(QMainWindow):
         # Install event filters for arrow key navigation on header buttons
         self.btn_add.installEventFilter(self)
         self.btn_toggle_fs.installEventFilter(self)
+        self.btn_reboot.installEventFilter(self)
+        self.btn_poweroff.installEventFilter(self)
         self.btn_exit.installEventFilter(self)
 
         header_layout.addWidget(lbl_title)
         header_layout.addStretch()
         header_layout.addWidget(self.btn_add)
         header_layout.addWidget(self.btn_toggle_fs)
+        header_layout.addWidget(self.btn_reboot)
+        header_layout.addWidget(self.btn_poweroff)
         header_layout.addWidget(self.btn_exit)
         page_dashboard_layout.addWidget(header)
 
@@ -245,6 +259,24 @@ class DashboardWindow(QMainWindow):
         else:
             self.showFullScreen()
             self.btn_toggle_fs.setText("🗗 Ventana")
+
+    def handle_reboot(self):
+        reply = QMessageBox.question(
+            self, "Confirmar Reinicio",
+            "¿Estás seguro de que deseas reiniciar el equipo?",
+            QMessageBox.Yes | QMessageBox.No
+        )
+        if reply == QMessageBox.Yes:
+            subprocess.run(["sudo", "reboot"])
+
+    def handle_poweroff(self):
+        reply = QMessageBox.question(
+            self, "Confirmar Apagado",
+            "¿Estás seguro de que deseas apagar el equipo?",
+            QMessageBox.Yes | QMessageBox.No
+        )
+        if reply == QMessageBox.Yes:
+            subprocess.run(["sudo", "shutdown", "now"])
 
     def handle_escape(self):
         # Back action via Escape shortcut
@@ -384,18 +416,18 @@ class DashboardWindow(QMainWindow):
         if event.type() == QEvent.KeyPress:
             key = event.key()
             if key in (Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down):
-                if watched in (self.btn_add, self.btn_toggle_fs, self.btn_exit):
+                if watched in (self.btn_add, self.btn_toggle_fs, self.btn_reboot, self.btn_poweroff, self.btn_exit):
                     self.navigate_header(watched, key)
                     return True
             elif key in (Qt.Key_Return, Qt.Key_Enter):
-                if watched in (self.btn_add, self.btn_toggle_fs, self.btn_exit):
+                if watched in (self.btn_add, self.btn_toggle_fs, self.btn_reboot, self.btn_poweroff, self.btn_exit):
                     watched.animateClick()
                     return True
         return super().eventFilter(watched, event)
 
     def navigate_header(self, current_btn, key):
         # Header buttons sequence
-        header_btns = [self.btn_add, self.btn_toggle_fs, self.btn_exit]
+        header_btns = [self.btn_add, self.btn_toggle_fs, self.btn_reboot, self.btn_poweroff, self.btn_exit]
         
         # Get all grid cards
         cards = []
@@ -415,16 +447,15 @@ class DashboardWindow(QMainWindow):
         elif key == Qt.Key_Down:
             if cards:
                 # Map header button index to top row grid columns:
-                # Add button (0) -> Card 0
-                # Fullscreen button (1) -> Card 2 (or last card)
-                # Exit button (2) -> Card 3 (or last card)
-                if idx == 1:
-                    target_col = min(2, len(cards) - 1)
-                elif idx == 2:
-                    target_col = min(3, len(cards) - 1)
-                else:
-                    target_col = min(0, len(cards) - 1)
-                cards[target_col].setFocus()
+                # Add(0) -> Col 0
+                # ToggleFS(1) -> Col 1
+                # Reboot(2) -> Col 2
+                # Poweroff(3) -> Col 2 or 3
+                # Exit(4) -> Col 3
+                col_map = {0: 0, 1: 1, 2: 2, 3: 2, 4: 3}
+                target_col = col_map.get(idx, 0)
+                target_idx = min(target_col, len(cards) - 1)
+                cards[target_idx].setFocus()
 
     def navigate_grid(self, current_card, key):
         # Fetch all cards
@@ -457,10 +488,12 @@ class DashboardWindow(QMainWindow):
                     cards[new_idx].setFocus()
             else:
                 # Top row of cards: transition focus to header buttons
-                if c in (0, 1):
+                if c == 0:
                     self.btn_add.setFocus()
-                elif c == 2:
+                elif c == 1:
                     self.btn_toggle_fs.setFocus()
+                elif c == 2:
+                    self.btn_reboot.setFocus()
                 elif c == 3:
                     self.btn_exit.setFocus()
         elif key == Qt.Key_Down:
@@ -483,7 +516,7 @@ class DashboardWindow(QMainWindow):
                 if isinstance(widget, LauncherCard):
                     cards.append(widget)
 
-            header_btns = [self.btn_add, self.btn_toggle_fs, self.btn_exit]
+            header_btns = [self.btn_add, self.btn_toggle_fs, self.btn_reboot, self.btn_poweroff, self.btn_exit]
 
             # If a card is focused, intercept E and Delete keys
             if isinstance(focused, LauncherCard):
