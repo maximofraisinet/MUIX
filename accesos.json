@@ -1,0 +1,30 @@
+[
+  {
+    "id": "youtube",
+    "name": "YouTube",
+    "type": "webapp",
+    "path": "https://www.youtube.com",
+    "icon": ""
+  },
+  {
+    "id": "stremio_web",
+    "name": "Stremio Web",
+    "type": "webapp",
+    "path": "https://web.stremio.com",
+    "icon": ""
+  },
+  {
+    "id": "connman",
+    "name": "Connman GTK",
+    "type": "command",
+    "path": "connman-gtk",
+    "icon": ""
+  },
+  {
+    "id": "terminal",
+    "name": "Terminal",
+    "type": "command",
+    "path": "konsole",
+    "icon": ""
+  }
+]
