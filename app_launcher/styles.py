@@ -51,10 +51,10 @@ QLabel#LauncherType {
 }
 
 QLabel#LauncherIcon {
-    background-color: #000000;
-    border: 1px solid #333333;
+    background-color: transparent;
+    border: none;
     border-radius: 0px;
-    padding: 5px;
+    padding: 0px;
 }
 
 /* Buttons */

@@ -20,7 +20,7 @@ class LauncherCard(QFrame):
         self.item = item
         self.setObjectName("LauncherCard")
         self.setCursor(Qt.PointingHandCursor)
-        self.setFixedSize(160, 140)
+        self.setFixedSize(180, 160)
 
         # Allow keyboard focus
         self.setFocusPolicy(Qt.StrongFocus)
@@ -32,15 +32,15 @@ class LauncherCard(QFrame):
         # Icon or Fallback
         self.icon_label = QLabel()
         self.icon_label.setAlignment(Qt.AlignCenter)
-        self.icon_label.setFixedSize(50, 50)
+        self.icon_label.setFixedSize(60, 60)
         self.icon_label.setObjectName("LauncherIcon")
 
         if item.icon and os.path.exists(item.icon):
-            pixmap = QPixmap(item.icon).scaled(46, 46, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            pixmap = QPixmap(item.icon).scaled(56, 56, Qt.KeepAspectRatio, Qt.SmoothTransformation)
             self.icon_label.setPixmap(pixmap)
         else:
             # Generate aesthetic fallback square image with name initial (dark mode)
-            pixmap = QPixmap(50, 50)
+            pixmap = QPixmap(60, 60)
             pixmap.fill(Qt.transparent)
             painter = QPainter(pixmap)
             painter.setRenderHint(QPainter.Antialiasing)
@@ -48,14 +48,14 @@ class LauncherCard(QFrame):
             # Pure dark background
             painter.setBrush(QColor("#1a1a1a"))
             painter.setPen(QPen(QColor("#ffffff"), 1))
-            painter.drawRect(2, 2, 45, 45)
+            painter.drawRect(2, 2, 55, 55)
             
             # White initial text
             painter.setPen(QColor("#ffffff"))
-            font = QFont("sans-serif", 16, QFont.Bold)
+            font = QFont("sans-serif", 18, QFont.Bold)
             painter.setFont(font)
             initial = item.name[0].upper() if item.name else "?"
-            painter.drawText(2, 2, 45, 45, Qt.AlignCenter, initial)
+            painter.drawText(2, 2, 55, 55, Qt.AlignCenter, initial)
             painter.end()
             self.icon_label.setPixmap(pixmap)
 
