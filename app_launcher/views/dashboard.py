@@ -1,7 +1,7 @@
 import os
 import shlex
 import subprocess
-from PySide6.QtCore import Qt, Signal, QUrl
+from PySide6.QtCore import Qt, Signal, QUrl, QTimer
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QLabel, QPushButton, QScrollArea, QMessageBox, QFrame, QStackedWidget
@@ -87,11 +87,18 @@ class LauncherCard(QFrame):
             event.accept()
         elif event.key() in (Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down):
             window = self.window()
-            if hasattr(window, "navigate_grid"):
-                window.navigate_grid(self, event.key())
-                event.accept()
+            if event.modifiers() & Qt.ShiftModifier and event.key() in (Qt.Key_Left, Qt.Key_Right):
+                if hasattr(window, "reorder_grid"):
+                    window.reorder_grid(self, event.key())
+                    event.accept()
+                else:
+                    super().keyPressEvent(event)
             else:
-                super().keyPressEvent(event)
+                if hasattr(window, "navigate_grid"):
+                    window.navigate_grid(self, event.key())
+                    event.accept()
+                else:
+                    super().keyPressEvent(event)
         else:
             super().keyPressEvent(event)
 
@@ -213,7 +220,7 @@ class DashboardWindow(QMainWindow):
         footer_layout = QHBoxLayout(footer)
         footer_layout.setContentsMargins(10, 0, 10, 0)
         
-        lbl_legend = QLabel("F1: Agregar | Enter: Abrir | E: Editar | Supr: Eliminar | Esc: Volver")
+        lbl_legend = QLabel("F1: Agregar | Enter: Abrir | E: Editar | Supr: Eliminar | Shift+Flechas: Reordenar | Esc: Volver")
         lbl_legend.setObjectName("FooterText")
         lbl_legend.setAlignment(Qt.AlignCenter)
         footer_layout.addWidget(lbl_legend)
@@ -265,7 +272,7 @@ class DashboardWindow(QMainWindow):
         else:
             self.focus_first_card()
 
-    def refresh_dashboard(self):
+    def refresh_dashboard(self, auto_focus=True):
         # Clear previous grid items
         while self.grid_layout.count():
             child = self.grid_layout.takeAt(0)
@@ -285,7 +292,8 @@ class DashboardWindow(QMainWindow):
             self.grid_layout.addWidget(card, row, col, Qt.AlignLeft | Qt.AlignTop)
         
         # Auto-focus the first item for instant keyboard navigation
-        self.focus_first_card()
+        if auto_focus:
+            self.focus_first_card()
 
     def focus_first_card(self):
         if self.grid_layout.count() > 0:
@@ -341,6 +349,35 @@ class DashboardWindow(QMainWindow):
                 self.refresh_dashboard()
             else:
                 QMessageBox.critical(self, "Error", "No se pudo guardar la configuración.")
+
+    def reorder_grid(self, current_card, key):
+        item = current_card.item
+        if item not in self.items:
+            return
+
+        current_idx = self.items.index(item)
+
+        if key == Qt.Key_Left:
+            if current_idx > 0:
+                # Swap with previous
+                self.items[current_idx], self.items[current_idx - 1] = self.items[current_idx - 1], self.items[current_idx]
+                if save_accesses(self.items):
+                    self.refresh_dashboard(auto_focus=False)
+                    QTimer.singleShot(20, lambda: self.focus_card_by_item(item))
+        elif key == Qt.Key_Right:
+            if current_idx < len(self.items) - 1:
+                # Swap with next
+                self.items[current_idx], self.items[current_idx + 1] = self.items[current_idx + 1], self.items[current_idx]
+                if save_accesses(self.items):
+                    self.refresh_dashboard(auto_focus=False)
+                    QTimer.singleShot(20, lambda: self.focus_card_by_item(item))
+
+    def focus_card_by_item(self, item):
+        for i in range(self.grid_layout.count()):
+            widget = self.grid_layout.itemAt(i).widget()
+            if isinstance(widget, LauncherCard) and widget.item.id == item.id:
+                widget.setFocus()
+                break
 
     def eventFilter(self, watched, event):
         from PySide6.QtCore import QEvent
