@@ -1,16 +1,16 @@
 DARK_STYLE = """
 /* General Window and Panels */
 QMainWindow {
-    background-color: #0b0c10;
+    background-color: #000000;
 }
 
 QWidget#CentralWidget {
-    background-color: #0b0c10;
+    background-color: #000000;
 }
 
 QWidget#HeaderPanel {
-    background-color: #1f2833;
-    border-bottom: 2px solid #0b0c10;
+    background-color: #000000;
+    border-bottom: 2px solid #ffffff;
 }
 
 /* Scroll Area styling */
@@ -25,132 +25,133 @@ QWidget#ScrollAreaContent {
 
 /* Card design for Grid Items */
 QFrame#LauncherCard {
-    background-color: #1f2833;
-    border: 1px solid #2d3748;
-    border-radius: 12px;
+    background-color: #000000;
+    border: 1px solid #333333;
+    border-radius: 0px;
 }
 
 QFrame#LauncherCard:hover, QFrame#LauncherCard:focus {
-    background-color: #2b3a4a;
-    border: 2px solid #66fcf1;
+    background-color: #121212;
+    border: 2px solid #ffffff;
 }
 
 QLabel#LauncherName {
     color: #ffffff;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: bold;
     background: transparent;
 }
 
 QLabel#LauncherType {
-    color: #66fcf1;
-    font-size: 11px;
-    font-weight: 500;
+    color: #aaaaaa;
+    font-size: 10px;
+    font-weight: bold;
     text-transform: uppercase;
     background: transparent;
 }
 
 QLabel#LauncherIcon {
-    background-color: #0b0c10;
-    border: 1px solid #2d3748;
-    border-radius: 20px;
+    background-color: #000000;
+    border: 1px solid #333333;
+    border-radius: 0px;
     padding: 5px;
 }
 
 /* Buttons */
 QPushButton {
-    background-color: #1f2833;
-    color: #c5c6c7;
-    border: 1px solid #45f3ff;
-    border-radius: 6px;
+    background-color: #000000;
+    color: #ffffff;
+    border: 1px solid #ffffff;
+    border-radius: 0px;
     padding: 8px 16px;
     font-size: 13px;
     font-weight: bold;
 }
 
-QPushButton:hover {
-    background-color: #45f3ff;
-    color: #0b0c10;
+QPushButton:hover, QPushButton:focus {
+    background-color: #ffffff;
+    color: #000000;
 }
 
 QPushButton:pressed {
-    background-color: #1f2833;
-    color: #45f3ff;
+    background-color: #dddddd;
+    color: #000000;
 }
 
 QPushButton#AddButton {
-    background-color: #0b0c10;
-    color: #66fcf1;
-    border: 2px solid #66fcf1;
-    font-size: 14px;
+    background-color: #ffffff;
+    color: #000000;
+    border: 1px solid #ffffff;
 }
 
-QPushButton#AddButton:hover {
-    background-color: #66fcf1;
-    color: #0b0c10;
+QPushButton#AddButton:hover, QPushButton#AddButton:focus {
+    background-color: #000000;
+    color: #ffffff;
 }
 
 QPushButton#CloseButton {
-    background-color: #e53e3e;
-    color: white;
-    border: none;
+    background-color: #ffffff;
+    color: #000000;
+    border: 1px solid #ffffff;
 }
 
-QPushButton#CloseButton:hover {
-    background-color: #c53030;
+QPushButton#CloseButton:hover, QPushButton#CloseButton:focus {
+    background-color: #ff3b30;
+    color: #ffffff;
+    border: 1px solid #ff3b30;
 }
 
 QPushButton#EditButton {
     background-color: transparent;
-    color: #66fcf1;
-    border: 1px solid #66fcf1;
+    color: #ffffff;
+    border: 1px solid #ffffff;
     padding: 4px 8px;
-    border-radius: 4px;
+    border-radius: 0px;
     font-size: 11px;
 }
 
 QPushButton#EditButton:hover {
-    background-color: #66fcf1;
-    color: #0b0c10;
+    background-color: #ffffff;
+    color: #000000;
 }
 
 QPushButton#DeleteButton {
     background-color: transparent;
-    color: #ff4d4d;
-    border: 1px solid #ff4d4d;
+    color: #ff3b30;
+    border: 1px solid #ff3b30;
     padding: 4px 8px;
-    border-radius: 4px;
+    border-radius: 0px;
     font-size: 11px;
 }
 
 QPushButton#DeleteButton:hover {
-    background-color: #ff4d4d;
-    color: #0b0c10;
+    background-color: #ff3b30;
+    color: #ffffff;
 }
 
 /* Dialogs */
 QDialog {
-    background-color: #1f2833;
-    border: 2px solid #66fcf1;
-    border-radius: 8px;
+    background-color: #000000;
+    border: 2px solid #ffffff;
+    border-radius: 0px;
 }
 
 QDialog QLabel {
-    color: #c5c6c7;
+    color: #ffffff;
     font-size: 13px;
 }
 
 /* Input Fields & Comboboxes */
 QLineEdit, QComboBox {
-    background-color: #0b0c10;
-    border: 1px solid #45f3ff;
-    border-radius: 6px;
+    background-color: #000000;
+    border: 1px solid #333333;
+    border-radius: 0px;
     padding: 8px;
     color: #ffffff;
 }
 
 QLineEdit:focus, QComboBox:focus {
-    border: 2px solid #66fcf1;
+    border: 2px solid #ffffff;
 }
 
 QComboBox::drop-down {
@@ -158,20 +159,20 @@ QComboBox::drop-down {
 }
 
 QComboBox QAbstractItemView {
-    background-color: #0b0c10;
+    background-color: #000000;
     color: #ffffff;
-    selection-background-color: #66fcf1;
-    selection-color: #0b0c10;
+    selection-background-color: #ffffff;
+    selection-color: #000000;
 }
 
 /* Progress bar in Web view */
 QProgressBar {
-    background-color: #1f2833;
+    background-color: #222222;
     border: none;
     height: 3px;
 }
 
 QProgressBar::chunk {
-    background-color: #66fcf1;
+    background-color: #ffffff;
 }
 """

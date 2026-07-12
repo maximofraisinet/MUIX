@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QLabel, QPushButton, QScrollArea, QMessageBox, QFrame, QStackedWidget
 )
-from PySide6.QtGui import QPixmap, QPainter, QColor, QFont, QKeySequence, QShortcut
+from PySide6.QtGui import QPixmap, QPainter, QColor, QFont, QKeySequence, QShortcut, QPen
 
 from app_launcher.models import load_accesses, save_accesses, AccessItem
 from app_launcher.views.settings import SettingsDialog
@@ -41,25 +41,23 @@ class LauncherCard(QFrame):
             pixmap = QPixmap(item.icon).scaled(46, 46, Qt.KeepAspectRatio, Qt.SmoothTransformation)
             self.icon_label.setPixmap(pixmap)
         else:
-            # Generate aesthetic fallback circular image with name initial
+            # Generate aesthetic fallback square image with name initial (dark mode)
             pixmap = QPixmap(50, 50)
             pixmap.fill(Qt.transparent)
             painter = QPainter(pixmap)
             painter.setRenderHint(QPainter.Antialiasing)
             
-            # Choose color based on name hash to vary colors dynamically
-            colors = ["#f87171", "#fb923c", "#fbbf24", "#34d399", "#2dd4bf", "#38bdf8", "#818cf8", "#c084fc", "#f472b6"]
-            color_hex = colors[abs(hash(item.name)) % len(colors)]
+            # Pure dark background
+            painter.setBrush(QColor("#1a1a1a"))
+            painter.setPen(QPen(QColor("#ffffff"), 1))
+            painter.drawRect(2, 2, 45, 45)
             
-            painter.setBrush(QColor(color_hex))
-            painter.setPen(Qt.NoPen)
-            painter.drawEllipse(2, 2, 46, 46)
-            
-            painter.setPen(QColor("#0d0e12"))
+            # White initial text
+            painter.setPen(QColor("#ffffff"))
             font = QFont("sans-serif", 16, QFont.Bold)
             painter.setFont(font)
             initial = item.name[0].upper() if item.name else "?"
-            painter.drawText(2, 2, 46, 46, Qt.AlignCenter, initial)
+            painter.drawText(2, 2, 45, 45, Qt.AlignCenter, initial)
             painter.end()
             self.icon_label.setPixmap(pixmap)
 
@@ -139,6 +137,14 @@ class DashboardWindow(QMainWindow):
         self.shortcut_back = QShortcut(QKeySequence(Qt.Key_Escape), self)
         self.shortcut_back.activated.connect(self.handle_escape)
 
+        # Global Shortcut: F5 to reload page when WebApp is active
+        self.shortcut_reload = QShortcut(QKeySequence(Qt.Key_F5), self)
+        self.shortcut_reload.activated.connect(self.handle_f5_reload)
+
+        # Global Shortcut: F1 to add new access when in dashboard view
+        self.shortcut_add = QShortcut(QKeySequence(Qt.Key_F1), self)
+        self.shortcut_add.activated.connect(self.handle_f1_add)
+
         # Central Stacked Widget
         self.stacked_widget = QStackedWidget(self)
         self.setCentralWidget(self.stacked_widget)
@@ -162,18 +168,21 @@ class DashboardWindow(QMainWindow):
         lbl_title = QLabel("MUIX DASHBOARD")
         lbl_title.setStyleSheet("color: #66fcf1; font-weight: bold; font-size: 20px; font-family: monospace; letter-spacing: 2px;")
         
-        self.btn_add = QPushButton("+ Agregar")
+        self.btn_add = QPushButton("+ Agregar (F1)")
         self.btn_add.setObjectName("AddButton")
         self.btn_add.setFocusPolicy(Qt.StrongFocus)
+        self.btn_add.setFixedSize(160, 35)
         self.btn_add.clicked.connect(self.add_new_access)
 
         self.btn_toggle_fs = QPushButton("🗗 Ventana")
         self.btn_toggle_fs.setFocusPolicy(Qt.StrongFocus)
+        self.btn_toggle_fs.setFixedSize(160, 35)
         self.btn_toggle_fs.clicked.connect(self.toggle_fullscreen)
 
         self.btn_exit = QPushButton("✕ Salir")
         self.btn_exit.setObjectName("CloseButton")
         self.btn_exit.setFocusPolicy(Qt.StrongFocus)
+        self.btn_exit.setFixedSize(160, 35)
         self.btn_exit.clicked.connect(self.close)
 
         # Install event filters for arrow key navigation on header buttons
@@ -244,6 +253,16 @@ class DashboardWindow(QMainWindow):
         # Back action via Escape shortcut
         if self.stacked_widget.currentIndex() == 1:
             self.show_dashboard_page()
+
+    def handle_f5_reload(self):
+        # Reload action via F5 shortcut
+        if self.stacked_widget.currentIndex() == 1:
+            self.web_widget.reload_page()
+
+    def handle_f1_add(self):
+        # Add action via F1 shortcut when in dashboard
+        if self.stacked_widget.currentIndex() == 0:
+            self.add_new_access()
 
     def show_dashboard_page(self):
         # Load blank page to stop web activities

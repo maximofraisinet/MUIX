@@ -28,8 +28,8 @@ class WebAppWidget(QWidget):
         self.btn_forward.setFixedWidth(40)
         self.btn_forward.clicked.connect(self.go_forward)
 
-        self.btn_reload = QPushButton("↻")
-        self.btn_reload.setFixedWidth(40)
+        self.btn_reload = QPushButton("Recargar (F5)")
+        self.btn_reload.setFixedWidth(140)
         self.btn_reload.clicked.connect(self.reload_page)
 
         self.lbl_title = QLabel("WebApp")
