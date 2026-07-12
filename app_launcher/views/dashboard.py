@@ -111,6 +111,13 @@ class LauncherCard(QFrame):
         if event.key() in (Qt.Key_Return, Qt.Key_Enter, Qt.Key_Space):
             self.clicked.emit()
             event.accept()
+        elif event.key() in (Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down):
+            window = self.window()
+            if hasattr(window, "navigate_grid"):
+                window.navigate_grid(self, event.key())
+                event.accept()
+            else:
+                super().keyPressEvent(event)
         else:
             super().keyPressEvent(event)
 
@@ -155,25 +162,30 @@ class DashboardWindow(QMainWindow):
         lbl_title = QLabel("MUIX DASHBOARD")
         lbl_title.setStyleSheet("color: #66fcf1; font-weight: bold; font-size: 20px; font-family: monospace; letter-spacing: 2px;")
         
-        btn_add = QPushButton("+ Agregar")
-        btn_add.setObjectName("AddButton")
-        btn_add.setFocusPolicy(Qt.NoFocus)
-        btn_add.clicked.connect(self.add_new_access)
+        self.btn_add = QPushButton("+ Agregar")
+        self.btn_add.setObjectName("AddButton")
+        self.btn_add.setFocusPolicy(Qt.StrongFocus)
+        self.btn_add.clicked.connect(self.add_new_access)
 
         self.btn_toggle_fs = QPushButton("🗗 Ventana")
-        self.btn_toggle_fs.setFocusPolicy(Qt.NoFocus)
+        self.btn_toggle_fs.setFocusPolicy(Qt.StrongFocus)
         self.btn_toggle_fs.clicked.connect(self.toggle_fullscreen)
 
-        btn_exit = QPushButton("✕ Salir")
-        btn_exit.setObjectName("CloseButton")
-        btn_exit.setFocusPolicy(Qt.NoFocus)
-        btn_exit.clicked.connect(self.close)
+        self.btn_exit = QPushButton("✕ Salir")
+        self.btn_exit.setObjectName("CloseButton")
+        self.btn_exit.setFocusPolicy(Qt.StrongFocus)
+        self.btn_exit.clicked.connect(self.close)
+
+        # Install event filters for arrow key navigation on header buttons
+        self.btn_add.installEventFilter(self)
+        self.btn_toggle_fs.installEventFilter(self)
+        self.btn_exit.installEventFilter(self)
 
         header_layout.addWidget(lbl_title)
         header_layout.addStretch()
-        header_layout.addWidget(btn_add)
+        header_layout.addWidget(self.btn_add)
         header_layout.addWidget(self.btn_toggle_fs)
-        header_layout.addWidget(btn_exit)
+        header_layout.addWidget(self.btn_exit)
         page_dashboard_layout.addWidget(header)
 
         # Scroll Area for launchers
@@ -183,9 +195,28 @@ class DashboardWindow(QMainWindow):
         
         self.scroll_content = QWidget()
         self.scroll_content.setObjectName("ScrollAreaContent")
-        self.grid_layout = QGridLayout(self.scroll_content)
-        self.grid_layout.setContentsMargins(20, 20, 20, 20)
-        self.grid_layout.setSpacing(20)
+        
+        # Center container horizontally and vertically
+        scroll_content_layout = QHBoxLayout(self.scroll_content)
+        scroll_content_layout.setContentsMargins(20, 20, 20, 20)
+        scroll_content_layout.addStretch(1)
+        
+        center_v_widget = QWidget()
+        center_v_layout = QVBoxLayout(center_v_widget)
+        center_v_layout.setContentsMargins(0, 0, 0, 0)
+        center_v_layout.addStretch(1)
+        
+        self.launcher_container = QWidget()
+        self.launcher_container.setMaximumWidth(800)
+        self.grid_layout = QGridLayout(self.launcher_container)
+        self.grid_layout.setContentsMargins(0, 0, 0, 0)
+        self.grid_layout.setSpacing(25)
+        
+        center_v_layout.addWidget(self.launcher_container)
+        center_v_layout.addStretch(1)
+        
+        scroll_content_layout.addWidget(center_v_widget)
+        scroll_content_layout.addStretch(1)
         
         scroll.setWidget(self.scroll_content)
         page_dashboard_layout.addWidget(scroll)
@@ -304,8 +335,100 @@ class DashboardWindow(QMainWindow):
             else:
                 QMessageBox.critical(self, "Error", "No se pudo guardar la configuración.")
 
+    def eventFilter(self, watched, event):
+        from PySide6.QtCore import QEvent
+        if event.type() == QEvent.KeyPress:
+            key = event.key()
+            if key in (Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down):
+                if watched in (self.btn_add, self.btn_toggle_fs, self.btn_exit):
+                    self.navigate_header(watched, key)
+                    return True
+            elif key in (Qt.Key_Return, Qt.Key_Enter):
+                if watched in (self.btn_add, self.btn_toggle_fs, self.btn_exit):
+                    watched.animateClick()
+                    return True
+        return super().eventFilter(watched, event)
+
+    def navigate_header(self, current_btn, key):
+        # Header buttons sequence
+        header_btns = [self.btn_add, self.btn_toggle_fs, self.btn_exit]
+        
+        # Get all grid cards
+        cards = []
+        for i in range(self.grid_layout.count()):
+            widget = self.grid_layout.itemAt(i).widget()
+            if isinstance(widget, LauncherCard):
+                cards.append(widget)
+
+        idx = header_btns.index(current_btn)
+
+        if key == Qt.Key_Left:
+            new_idx = (idx - 1) % len(header_btns)
+            header_btns[new_idx].setFocus()
+        elif key == Qt.Key_Right:
+            new_idx = (idx + 1) % len(header_btns)
+            header_btns[new_idx].setFocus()
+        elif key == Qt.Key_Down:
+            if cards:
+                # Map header button index to top row grid columns:
+                # Add button (0) -> Card 0
+                # Fullscreen button (1) -> Card 2 (or last card)
+                # Exit button (2) -> Card 3 (or last card)
+                if idx == 1:
+                    target_col = min(2, len(cards) - 1)
+                elif idx == 2:
+                    target_col = min(3, len(cards) - 1)
+                else:
+                    target_col = min(0, len(cards) - 1)
+                cards[target_col].setFocus()
+
+    def navigate_grid(self, current_card, key):
+        # Fetch all cards
+        cards = []
+        for i in range(self.grid_layout.count()):
+            widget = self.grid_layout.itemAt(i).widget()
+            if isinstance(widget, LauncherCard):
+                cards.append(widget)
+
+        if not cards or current_card not in cards:
+            return
+
+        current_idx = cards.index(current_card)
+        cols = 4
+        rows = (len(cards) + cols - 1) // cols
+
+        r = current_idx // cols
+        c = current_idx % cols
+
+        if key == Qt.Key_Left:
+            new_idx = max(0, current_idx - 1)
+            cards[new_idx].setFocus()
+        elif key == Qt.Key_Right:
+            new_idx = min(len(cards) - 1, current_idx + 1)
+            cards[new_idx].setFocus()
+        elif key == Qt.Key_Up:
+            if r > 0:
+                new_idx = (r - 1) * cols + c
+                if new_idx < len(cards):
+                    cards[new_idx].setFocus()
+            else:
+                # Top row of cards: transition focus to header buttons
+                if c in (0, 1):
+                    self.btn_add.setFocus()
+                elif c == 2:
+                    self.btn_toggle_fs.setFocus()
+                elif c == 3:
+                    self.btn_exit.setFocus()
+        elif key == Qt.Key_Down:
+            if r < rows - 1:
+                new_idx = (r + 1) * cols + c
+                if new_idx < len(cards):
+                    cards[new_idx].setFocus()
+                else:
+                    cards[-1].setFocus()
+
     def keyPressEvent(self, event):
-        # Active only in dashboard view
+        # Active only in dashboard view when no card or header button is focused
         if self.stacked_widget.currentIndex() == 0:
             focused = self.focusWidget()
             
@@ -321,41 +444,16 @@ class DashboardWindow(QMainWindow):
                 return
 
             if focused not in cards:
-                # If nothing focused, focus the first one
-                cards[0].setFocus()
+                # If nothing focused, focus the first one or the last focused one
+                if self.last_focused_card and self.last_focused_card in cards:
+                    self.last_focused_card.setFocus()
+                else:
+                    cards[0].setFocus()
                 event.accept()
                 return
 
-            current_idx = cards.index(focused)
-            cols = 4
-            rows = (len(cards) + cols - 1) // cols
-
-            r = current_idx // cols
-            c = current_idx % cols
-
-            if event.key() == Qt.Key_Left:
-                new_idx = max(0, current_idx - 1)
-                cards[new_idx].setFocus()
-                event.accept()
-            elif event.key() == Qt.Key_Right:
-                new_idx = min(len(cards) - 1, current_idx + 1)
-                cards[new_idx].setFocus()
-                event.accept()
-            elif event.key() == Qt.Key_Up:
-                if r > 0:
-                    new_idx = (r - 1) * cols + c
-                    if new_idx < len(cards):
-                        cards[new_idx].setFocus()
-                    event.accept()
-            elif event.key() == Qt.Key_Down:
-                if r < rows - 1:
-                    new_idx = (r + 1) * cols + c
-                    if new_idx < len(cards):
-                        cards[new_idx].setFocus()
-                    else:
-                        cards[-1].setFocus()
-                    event.accept()
-            else:
-                super().keyPressEvent(event)
+            # If a card is focused, arrow keys will be handled by LauncherCard keyPressEvent.
+            # But if a non-arrow key is pressed or default behavior is needed, delegate:
+            super().keyPressEvent(event)
         else:
             super().keyPressEvent(event)
