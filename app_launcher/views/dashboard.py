@@ -14,15 +14,13 @@ from app_launcher.views.web_window import WebAppWidget
 
 class LauncherCard(QFrame):
     clicked = Signal()
-    edit_clicked = Signal()
-    delete_clicked = Signal()
 
     def __init__(self, item, parent=None):
         super().__init__(parent)
         self.item = item
         self.setObjectName("LauncherCard")
         self.setCursor(Qt.PointingHandCursor)
-        self.setFixedSize(160, 180)
+        self.setFixedSize(160, 140)
 
         # Allow keyboard focus
         self.setFocusPolicy(Qt.StrongFocus)
@@ -76,33 +74,11 @@ class LauncherCard(QFrame):
         self.type_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(self.type_label)
 
-        # Action Buttons Layout (edit / delete)
-        btn_layout = QHBoxLayout()
-        btn_layout.setSpacing(6)
-        btn_layout.setContentsMargins(0, 5, 0, 0)
-
-        self.btn_edit = QPushButton("Edit")
-        self.btn_edit.setObjectName("EditButton")
-        # Prevent these buttons from stealing key navigation focus from the card
-        self.btn_edit.setFocusPolicy(Qt.NoFocus)
-        self.btn_edit.clicked.connect(self.edit_clicked.emit)
-        
-        self.btn_delete = QPushButton("Del")
-        self.btn_delete.setObjectName("DeleteButton")
-        self.btn_delete.setFocusPolicy(Qt.NoFocus)
-        self.btn_delete.clicked.connect(self.delete_clicked.emit)
-
-        btn_layout.addWidget(self.btn_edit)
-        btn_layout.addWidget(self.btn_delete)
-        layout.addLayout(btn_layout)
-
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
             # Set focus to this card when clicked
             self.setFocus()
-            child = self.childAt(event.position().toPoint())
-            if child not in (self.btn_edit, self.btn_delete):
-                self.clicked.emit()
+            self.clicked.emit()
         super().mousePressEvent(event)
 
     def keyPressEvent(self, event):
@@ -229,6 +205,20 @@ class DashboardWindow(QMainWindow):
         
         scroll.setWidget(self.scroll_content)
         page_dashboard_layout.addWidget(scroll)
+
+        # Footer Panel (Legend of shortcuts)
+        footer = QWidget()
+        footer.setObjectName("FooterPanel")
+        footer.setFixedHeight(30)
+        footer_layout = QHBoxLayout(footer)
+        footer_layout.setContentsMargins(10, 0, 10, 0)
+        
+        lbl_legend = QLabel("F1: Agregar | Enter: Abrir | E: Editar | Supr: Eliminar | Esc: Volver")
+        lbl_legend.setObjectName("FooterText")
+        lbl_legend.setAlignment(Qt.AlignCenter)
+        footer_layout.addWidget(lbl_legend)
+        page_dashboard_layout.addWidget(footer)
+
         self.stacked_widget.addWidget(self.page_dashboard)
 
         # ----------------------------------------------------
@@ -292,8 +282,6 @@ class DashboardWindow(QMainWindow):
             col = index % cols
             card = LauncherCard(item)
             card.clicked.connect(lambda i=item: self.launch_item(i))
-            card.edit_clicked.connect(lambda i=item: self.edit_item(i))
-            card.delete_clicked.connect(lambda i=item: self.delete_item(i))
             self.grid_layout.addWidget(card, row, col, Qt.AlignLeft | Qt.AlignTop)
         
         # Auto-focus the first item for instant keyboard navigation
@@ -447,7 +435,7 @@ class DashboardWindow(QMainWindow):
                     cards[-1].setFocus()
 
     def keyPressEvent(self, event):
-        # Active only in dashboard view when no card or header button is focused
+        # Active only in dashboard view
         if self.stacked_widget.currentIndex() == 0:
             focused = self.focusWidget()
             
@@ -458,12 +446,26 @@ class DashboardWindow(QMainWindow):
                 if isinstance(widget, LauncherCard):
                     cards.append(widget)
 
+            header_btns = [self.btn_add, self.btn_toggle_fs, self.btn_exit]
+
+            # If a card is focused, intercept E and Delete keys
+            if isinstance(focused, LauncherCard):
+                if event.key() == Qt.Key_E:
+                    self.edit_item(focused.item)
+                    event.accept()
+                    return
+                elif event.key() == Qt.Key_Delete:
+                    self.delete_item(focused.item)
+                    event.accept()
+                    return
+
             if not cards:
+                if focused not in header_btns:
+                    self.btn_add.setFocus()
                 super().keyPressEvent(event)
                 return
 
-            if focused not in cards:
-                # If nothing focused, focus the first one or the last focused one
+            if focused not in cards and focused not in header_btns:
                 if self.last_focused_card and self.last_focused_card in cards:
                     self.last_focused_card.setFocus()
                 else:
@@ -471,8 +473,6 @@ class DashboardWindow(QMainWindow):
                 event.accept()
                 return
 
-            # If a card is focused, arrow keys will be handled by LauncherCard keyPressEvent.
-            # But if a non-arrow key is pressed or default behavior is needed, delegate:
             super().keyPressEvent(event)
         else:
             super().keyPressEvent(event)

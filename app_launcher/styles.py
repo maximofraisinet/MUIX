@@ -101,32 +101,15 @@ QPushButton#CloseButton:hover, QPushButton#CloseButton:focus {
     border: 1px solid #ff3b30;
 }
 
-QPushButton#EditButton {
-    background-color: transparent;
-    color: #ffffff;
-    border: 1px solid #ffffff;
-    padding: 4px 8px;
-    border-radius: 0px;
-    font-size: 11px;
+QWidget#FooterPanel {
+    background-color: #000000;
+    border-top: 1px solid #333333;
 }
 
-QPushButton#EditButton:hover {
-    background-color: #ffffff;
-    color: #000000;
-}
-
-QPushButton#DeleteButton {
-    background-color: transparent;
-    color: #ff3b30;
-    border: 1px solid #ff3b30;
-    padding: 4px 8px;
-    border-radius: 0px;
-    font-size: 11px;
-}
-
-QPushButton#DeleteButton:hover {
-    background-color: #ff3b30;
-    color: #ffffff;
+QLabel#FooterText {
+    color: #888888;
+    font-size: 12px;
+    font-family: monospace;
 }
 
 /* Dialogs */
