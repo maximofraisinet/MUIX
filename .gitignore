@@ -21,3 +21,5 @@ htmlcov/
 # Local configuration files
 .env
 .env.local
+accesos.json
+icons/

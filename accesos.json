@@ -1,12 +1,5 @@
 [
   {
-    "id": "youtube",
-    "name": "YouTube",
-    "type": "webapp",
-    "path": "https://www.youtube.com",
-    "icon": ""
-  },
-  {
     "id": "stremio_web",
     "name": "Stremio Web",
     "type": "webapp",
@@ -26,5 +19,12 @@
     "type": "command",
     "path": "konsole",
     "icon": ""
+  },
+  {
+    "id": "157cf60e-832d-4c6c-b066-bbe53e70173c",
+    "name": "YouTube",
+    "type": "webapp",
+    "path": "https://www.youtube.com",
+    "icon": "/home/maximo/Code/muix/app_launcher/icons/www.youtube.com.png"
   }
 ]

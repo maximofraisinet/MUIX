@@ -34,9 +34,18 @@ class AccessItem:
 
 def load_accesses():
     if not os.path.exists(CONFIG_PATH):
-        # Create empty configuration if not exists
-        save_accesses([])
-        return []
+        # Create default configuration with YouTube WebApp
+        default_items = [
+            AccessItem(
+                name="YouTube",
+                type_="webapp",
+                path="https://www.youtube.com",
+                icon="",
+                id_="youtube"
+            )
+        ]
+        save_accesses(default_items)
+        return default_items
     try:
         with open(CONFIG_PATH, "r", encoding="utf-8") as f:
             data = json.load(f)

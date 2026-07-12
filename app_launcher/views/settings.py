@@ -1,10 +1,41 @@
 import os
+import urllib.request
+from urllib.parse import urlparse
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
     QComboBox, QPushButton, QFileDialog, QMessageBox, QFormLayout
 )
 from app_launcher.models import AccessItem
+
+def fetch_favicon(url):
+    try:
+        parsed_url = urlparse(url)
+        domain = parsed_url.netloc or parsed_url.path.split('/')[0]
+        if not domain:
+            return ""
+        favicon_url = f"https://www.google.com/s2/favicons?domain={domain}&sz=64"
+        
+        # Save path relative to root directory
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        icons_dir = os.path.join(project_root, "icons")
+        os.makedirs(icons_dir, exist_ok=True)
+        
+        # Safe filename
+        safe_domain = domain.replace(":", "_").replace("/", "_")
+        local_path = os.path.join(icons_dir, f"{safe_domain}.png")
+        
+        req = urllib.request.Request(
+            favicon_url,
+            headers={'User-Agent': 'Mozilla/5.0'}
+        )
+        with urllib.request.urlopen(req, timeout=2) as response:
+            with open(local_path, "wb") as f:
+                f.write(response.read())
+        return local_path
+    except Exception as e:
+        print(f"Error fetching favicon for {url}: {e}")
+        return ""
 
 class SettingsDialog(QDialog):
     def __init__(self, item=None, parent=None):
@@ -111,12 +142,19 @@ class SettingsDialog(QDialog):
             return
 
         # Simple validation for WebApp
-        if type_ == "webapp" and not (path.startswith("http://") or path.startswith("https://")):
-            # Automatically prepend https:// if missing
-            if not path.startswith("www."):
-                path = "https://" + path
-            else:
-                path = "https://" + path
+        if type_ == "webapp":
+            if not (path.startswith("http://") or path.startswith("https://")):
+                # Automatically prepend https:// if missing
+                if not path.startswith("www."):
+                    path = "https://" + path
+                else:
+                    path = "https://" + path
+
+            # Automatically fetch favicon if no icon is specified
+            if not icon:
+                fetched_icon = fetch_favicon(path)
+                if fetched_icon:
+                    icon = fetched_icon
 
         if not self.item:
             # Create new access item
