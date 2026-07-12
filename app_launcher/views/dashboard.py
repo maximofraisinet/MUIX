@@ -267,7 +267,7 @@ class DashboardWindow(QMainWindow):
             QMessageBox.Yes | QMessageBox.No
         )
         if reply == QMessageBox.Yes:
-            subprocess.run(["sudo", "reboot"])
+            subprocess.Popen(["xterm", "-e", "sudo reboot"])
 
     def handle_poweroff(self):
         reply = QMessageBox.question(
@@ -276,7 +276,7 @@ class DashboardWindow(QMainWindow):
             QMessageBox.Yes | QMessageBox.No
         )
         if reply == QMessageBox.Yes:
-            subprocess.run(["sudo", "shutdown", "now"])
+            subprocess.Popen(["xterm", "-e", "sudo shutdown now"])
 
     def handle_escape(self):
         # Back action via Escape shortcut
