@@ -1,7 +1,7 @@
 import os
 import shlex
 import subprocess
-from PySide6.QtCore import Qt, Signal, QUrl, QTimer
+from PySide6.QtCore import Qt, Signal, QUrl, QTimer, QDateTime
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QLabel, QPushButton, QScrollArea, QMessageBox, QFrame, QStackedWidget
@@ -157,7 +157,7 @@ class DashboardWindow(QMainWindow):
         self.btn_add.setFixedSize(160, 35)
         self.btn_add.clicked.connect(self.add_new_access)
 
-        self.btn_toggle_fs = QPushButton("🗗 Ventana")
+        self.btn_toggle_fs = QPushButton("Ventana")
         self.btn_toggle_fs.setFocusPolicy(Qt.StrongFocus)
         self.btn_toggle_fs.setFixedSize(160, 35)
         self.btn_toggle_fs.clicked.connect(self.toggle_fullscreen)
@@ -172,26 +172,29 @@ class DashboardWindow(QMainWindow):
         self.btn_poweroff.setFixedSize(160, 35)
         self.btn_poweroff.clicked.connect(self.handle_poweroff)
 
-        self.btn_exit = QPushButton("✕ Salir")
-        self.btn_exit.setObjectName("CloseButton")
-        self.btn_exit.setFocusPolicy(Qt.StrongFocus)
-        self.btn_exit.setFixedSize(160, 35)
-        self.btn_exit.clicked.connect(self.close)
-
         # Install event filters for arrow key navigation on header buttons
         self.btn_add.installEventFilter(self)
         self.btn_toggle_fs.installEventFilter(self)
         self.btn_reboot.installEventFilter(self)
         self.btn_poweroff.installEventFilter(self)
-        self.btn_exit.installEventFilter(self)
+
+        # Clock label in header
+        self.lbl_clock = QLabel()
+        self.lbl_clock.setObjectName("HeaderClock")
+        self.lbl_clock.setStyleSheet("color: #888888; font-size: 14px; font-family: monospace; margin-right: 15px;")
+        
+        self.timer_clock = QTimer(self)
+        self.timer_clock.timeout.connect(self.update_clock)
+        self.timer_clock.start(1000)
+        self.update_clock()
 
         header_layout.addWidget(lbl_title)
         header_layout.addStretch()
+        header_layout.addWidget(self.lbl_clock)
         header_layout.addWidget(self.btn_add)
         header_layout.addWidget(self.btn_toggle_fs)
         header_layout.addWidget(self.btn_reboot)
         header_layout.addWidget(self.btn_poweroff)
-        header_layout.addWidget(self.btn_exit)
         page_dashboard_layout.addWidget(header)
 
         # Scroll Area for launchers
@@ -255,10 +258,14 @@ class DashboardWindow(QMainWindow):
     def toggle_fullscreen(self):
         if self.isFullScreen():
             self.showNormal()
-            self.btn_toggle_fs.setText("🗖 Pantalla Completa")
+            self.btn_toggle_fs.setText("Pantalla Completa")
         else:
             self.showFullScreen()
-            self.btn_toggle_fs.setText("🗗 Ventana")
+            self.btn_toggle_fs.setText("Ventana")
+
+    def update_clock(self):
+        now = QDateTime.currentDateTime()
+        self.lbl_clock.setText(now.toString("dd/MM/yyyy  HH:mm:ss"))
 
     def handle_reboot(self):
         reply = QMessageBox.question(
@@ -448,18 +455,18 @@ class DashboardWindow(QMainWindow):
         if event.type() == QEvent.KeyPress:
             key = event.key()
             if key in (Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down):
-                if watched in (self.btn_add, self.btn_toggle_fs, self.btn_reboot, self.btn_poweroff, self.btn_exit):
+                if watched in (self.btn_add, self.btn_toggle_fs, self.btn_reboot, self.btn_poweroff):
                     self.navigate_header(watched, key)
                     return True
             elif key in (Qt.Key_Return, Qt.Key_Enter):
-                if watched in (self.btn_add, self.btn_toggle_fs, self.btn_reboot, self.btn_poweroff, self.btn_exit):
+                if watched in (self.btn_add, self.btn_toggle_fs, self.btn_reboot, self.btn_poweroff):
                     watched.animateClick()
                     return True
         return super().eventFilter(watched, event)
 
     def navigate_header(self, current_btn, key):
-        # Header buttons sequence
-        header_btns = [self.btn_add, self.btn_toggle_fs, self.btn_reboot, self.btn_poweroff, self.btn_exit]
+        # Header buttons sequence (exactly 4 buttons now)
+        header_btns = [self.btn_add, self.btn_toggle_fs, self.btn_reboot, self.btn_poweroff]
         
         # Get all grid cards
         cards = []
@@ -478,17 +485,10 @@ class DashboardWindow(QMainWindow):
             header_btns[new_idx].setFocus()
         elif key == Qt.Key_Down:
             if cards:
-                # Map header button index to top row grid columns:
-                # Add(0) -> Col 0
-                # ToggleFS(1) -> Col 1
-                # Reboot(2) -> Col 2
-                # Poweroff(3) -> Col 2 or 3
-                # Exit(4) -> Col 3
-                col_map = {0: 0, 1: 1, 2: 2, 3: 2, 4: 3}
-                target_col = col_map.get(idx, 0)
-                target_idx = min(target_col, len(cards) - 1)
-                cards[target_idx].setFocus()
-                self.scroll.ensureWidgetVisible(cards[target_idx], 50, 100)
+                # 4 buttons and 4 columns: Perfect 1-to-1 mapping!
+                target_col = min(idx, len(cards) - 1)
+                cards[target_col].setFocus()
+                self.scroll.ensureWidgetVisible(cards[target_col], 50, 100)
 
     def navigate_grid(self, current_card, key):
         # Fetch all cards
@@ -523,7 +523,7 @@ class DashboardWindow(QMainWindow):
                     cards[new_idx].setFocus()
                     self.scroll.ensureWidgetVisible(cards[new_idx], 50, 100)
             else:
-                # Top row of cards: transition focus to header buttons
+                # Top row of cards: transition focus to header buttons (Perfect 1-to-1 mapping)
                 if c == 0:
                     self.btn_add.setFocus()
                 elif c == 1:
@@ -531,7 +531,7 @@ class DashboardWindow(QMainWindow):
                 elif c == 2:
                     self.btn_reboot.setFocus()
                 elif c == 3:
-                    self.btn_exit.setFocus()
+                    self.btn_poweroff.setFocus()
         elif key == Qt.Key_Down:
             if r < rows - 1:
                 new_idx = (r + 1) * cols + c
@@ -554,7 +554,7 @@ class DashboardWindow(QMainWindow):
                 if isinstance(widget, LauncherCard):
                     cards.append(widget)
 
-            header_btns = [self.btn_add, self.btn_toggle_fs, self.btn_reboot, self.btn_poweroff, self.btn_exit]
+            header_btns = [self.btn_add, self.btn_toggle_fs, self.btn_reboot, self.btn_poweroff]
 
             # If a card is focused, intercept E and Delete keys
             if isinstance(focused, LauncherCard):
