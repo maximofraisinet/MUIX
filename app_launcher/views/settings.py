@@ -1,10 +1,12 @@
 import os
 import urllib.request
 from urllib.parse import urlparse
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QSize
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
-    QComboBox, QPushButton, QFileDialog, QMessageBox, QFormLayout
+    QComboBox, QPushButton, QFileDialog, QMessageBox, QFormLayout,
+    QListWidget, QListWidgetItem
 )
 from app_launcher.models import AccessItem
 
@@ -36,6 +38,149 @@ def fetch_favicon(url):
     except Exception as e:
         print(f"Error fetching favicon for {url}: {e}")
         return ""
+
+class IconSearchDialog(QDialog):
+    def __init__(self, initial_query="", parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Buscador de Iconos del Sistema")
+        self.setMinimumSize(550, 450)
+        self.selected_icon_path = ""
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(15, 15, 15, 15)
+        layout.setSpacing(12)
+
+        # Header instructions
+        desc = QLabel("Busca iconos instalados en el sistema (por ejemplo, supertux2).")
+        desc.setStyleSheet("color: #aaaaaa; font-size: 12px;")
+        layout.addWidget(desc)
+
+        # Search Bar Row
+        search_layout = QHBoxLayout()
+        search_layout.setSpacing(10)
+        self.txt_search = QLineEdit()
+        self.txt_search.setPlaceholderText("Ej. supertux2, spotify, vlc...")
+        self.txt_search.setText(initial_query)
+        self.txt_search.returnPressed.connect(self.perform_search)
+        
+        self.btn_search = QPushButton("Buscar")
+        self.btn_search.setFixedWidth(80)
+        self.btn_search.clicked.connect(self.perform_search)
+
+        search_layout.addWidget(self.txt_search)
+        search_layout.addWidget(self.btn_search)
+        layout.addLayout(search_layout)
+
+        # Results Grid (ListWidget in IconMode)
+        self.list_widget = QListWidget()
+        self.list_widget.setViewMode(QListWidget.IconMode)
+        self.list_widget.setIconSize(QSize(48, 48))
+        self.list_widget.setMovement(QListWidget.Static)
+        self.list_widget.setResizeMode(QListWidget.Adjust)
+        self.list_widget.setSpacing(12)
+        # Style QListWidget to match our theme (dark mode, white outlines)
+        self.list_widget.setStyleSheet("""
+            QListWidget {
+                background-color: #000000;
+                border: 1px solid #ffffff;
+                color: #ffffff;
+            }
+            QListWidget::item {
+                border: 1px solid transparent;
+                padding: 5px;
+                color: #ffffff;
+            }
+            QListWidget::item:hover {
+                background-color: #1a1a1a;
+                border: 1px solid #ffffff;
+            }
+            QListWidget::item:selected {
+                background-color: #ffffff;
+                color: #000000;
+                border: 1px solid #ffffff;
+            }
+        """)
+        self.list_widget.itemDoubleClicked.connect(self.accept_selection)
+        layout.addWidget(self.list_widget)
+
+        # Action Buttons
+        btn_layout = QHBoxLayout()
+        btn_layout.addStretch()
+        
+        self.btn_cancel = QPushButton("Cancelar")
+        self.btn_cancel.clicked.connect(self.reject)
+        
+        self.btn_accept = QPushButton("Seleccionar")
+        self.btn_accept.setObjectName("AddButton")
+        self.btn_accept.clicked.connect(self.accept_selection)
+
+        btn_layout.addWidget(self.btn_cancel)
+        btn_layout.addWidget(self.btn_accept)
+        layout.addLayout(btn_layout)
+
+        # Run initial search if query is provided
+        if initial_query:
+            self.perform_search()
+
+    def perform_search(self):
+        self.list_widget.clear()
+        query = self.txt_search.text().strip()
+        if not query:
+            return
+
+        results = self.find_system_icons(query)
+        if not results:
+            QMessageBox.information(self, "Buscador de Iconos", "No se encontraron iconos que coincidan con la búsqueda.")
+            return
+
+        for path in results:
+            filename = os.path.basename(path)
+            # Create list item
+            item = QListWidgetItem()
+            item.setIcon(QIcon(path))
+            item.setText(filename)
+            item.setToolTip(path)
+            item.setData(Qt.UserRole, path)
+            self.list_widget.addItem(item)
+
+    def find_system_icons(self, query):
+        search_dirs = [
+            "/usr/share/icons",
+            "/usr/share/pixmaps",
+            os.path.expanduser("~/.local/share/icons")
+        ]
+        matches = []
+        query = query.strip().lower()
+        if not query:
+            return matches
+
+        for base_dir in search_dirs:
+            if not os.path.exists(base_dir):
+                continue
+            for root, dirs, files in os.walk(base_dir):
+                # Optimization: skip cursors and small icons (16x16, 22x22, etc.) for dashboard flow
+                root_lower = root.lower()
+                if "cursor" in root_lower or "16x16" in root_lower or "22x22" in root_lower or "24x24" in root_lower:
+                    continue
+                for file in files:
+                    name, ext = os.path.splitext(file)
+                    if ext.lower() in [".png", ".svg", ".jpg", ".jpeg", ".xpm"]:
+                        if query in name.lower():
+                            full_path = os.path.join(root, file)
+                            if full_path not in matches:
+                                matches.append(full_path)
+                                # Limit results to 60 to keep performance solid
+                                if len(matches) >= 60:
+                                    return matches
+        return matches
+
+    def accept_selection(self):
+        selected_items = self.list_widget.selectedItems()
+        if not selected_items:
+            QMessageBox.warning(self, "Buscador de Iconos", "Por favor seleccione un icono de la lista.")
+            return
+        self.selected_icon_path = selected_items[0].data(Qt.UserRole)
+        self.accept()
 
 class SettingsDialog(QDialog):
     def __init__(self, item=None, parent=None):
@@ -74,15 +219,22 @@ class SettingsDialog(QDialog):
         self.txt_path.setPlaceholderText("https://... o comando del sistema")
         form_layout.addRow("Ruta / URL:", self.txt_path)
 
-        # Icon Field with Browse Button
+        # Icon Field with Browse and Search System Buttons
         icon_layout = QHBoxLayout()
         self.txt_icon = QLineEdit()
         self.txt_icon.setPlaceholderText("Ruta al archivo de imagen (opcional)")
+        
         self.btn_browse_icon = QPushButton("Buscar")
         self.btn_browse_icon.setFixedWidth(80)
         self.btn_browse_icon.clicked.connect(self.browse_icon)
+        
+        self.btn_search_system_icon = QPushButton("Buscar Sistema")
+        self.btn_search_system_icon.setFixedWidth(120)
+        self.btn_search_system_icon.clicked.connect(self.search_system_icon)
+        
         icon_layout.addWidget(self.txt_icon)
         icon_layout.addWidget(self.btn_browse_icon)
+        icon_layout.addWidget(self.btn_search_system_icon)
         
         form_layout.addRow("Icono:", icon_layout)
         layout.addLayout(form_layout)
@@ -127,6 +279,13 @@ class SettingsDialog(QDialog):
         )
         if file_path:
             self.txt_icon.setText(file_path)
+
+    def search_system_icon(self):
+        initial_query = self.txt_name.text().strip()
+        dialog = IconSearchDialog(initial_query, self)
+        if dialog.exec() == QDialog.Accepted:
+            if dialog.selected_icon_path:
+                self.txt_icon.setText(dialog.selected_icon_path)
 
     def save(self):
         name = self.txt_name.text().strip()
