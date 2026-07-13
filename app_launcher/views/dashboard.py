@@ -195,9 +195,9 @@ class DashboardWindow(QMainWindow):
         page_dashboard_layout.addWidget(header)
 
         # Scroll Area for launchers
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setObjectName("ScrollArea")
+        self.scroll = QScrollArea()
+        self.scroll.setWidgetResizable(True)
+        self.scroll.setObjectName("ScrollArea")
         
         self.scroll_content = QWidget()
         self.scroll_content.setObjectName("ScrollAreaContent")
@@ -224,8 +224,8 @@ class DashboardWindow(QMainWindow):
         scroll_content_layout.addWidget(center_v_widget)
         scroll_content_layout.addStretch(1)
         
-        scroll.setWidget(self.scroll_content)
-        page_dashboard_layout.addWidget(scroll)
+        self.scroll.setWidget(self.scroll_content)
+        page_dashboard_layout.addWidget(self.scroll)
 
         # Footer Panel (Legend of shortcuts)
         footer = QWidget()
@@ -301,6 +301,7 @@ class DashboardWindow(QMainWindow):
         # Restore focus to the card that opened the WebApp
         if self.last_focused_card:
             self.last_focused_card.setFocus()
+            self.scroll.ensureWidgetVisible(self.last_focused_card, 50, 100)
         else:
             self.focus_first_card()
 
@@ -332,6 +333,7 @@ class DashboardWindow(QMainWindow):
             first_item = self.grid_layout.itemAt(0).widget()
             if first_item:
                 first_item.setFocus()
+                self.scroll.ensureWidgetVisible(first_item, 50, 100)
 
     def launch_item(self, item):
         # Remember last focused card
@@ -409,6 +411,7 @@ class DashboardWindow(QMainWindow):
             widget = self.grid_layout.itemAt(i).widget()
             if isinstance(widget, LauncherCard) and widget.item.id == item.id:
                 widget.setFocus()
+                self.scroll.ensureWidgetVisible(widget, 50, 100)
                 break
 
     def eventFilter(self, watched, event):
@@ -456,6 +459,7 @@ class DashboardWindow(QMainWindow):
                 target_col = col_map.get(idx, 0)
                 target_idx = min(target_col, len(cards) - 1)
                 cards[target_idx].setFocus()
+                self.scroll.ensureWidgetVisible(cards[target_idx], 50, 100)
 
     def navigate_grid(self, current_card, key):
         # Fetch all cards
@@ -478,14 +482,17 @@ class DashboardWindow(QMainWindow):
         if key == Qt.Key_Left:
             new_idx = max(0, current_idx - 1)
             cards[new_idx].setFocus()
+            self.scroll.ensureWidgetVisible(cards[new_idx], 50, 100)
         elif key == Qt.Key_Right:
             new_idx = min(len(cards) - 1, current_idx + 1)
             cards[new_idx].setFocus()
+            self.scroll.ensureWidgetVisible(cards[new_idx], 50, 100)
         elif key == Qt.Key_Up:
             if r > 0:
                 new_idx = (r - 1) * cols + c
                 if new_idx < len(cards):
                     cards[new_idx].setFocus()
+                    self.scroll.ensureWidgetVisible(cards[new_idx], 50, 100)
             else:
                 # Top row of cards: transition focus to header buttons
                 if c == 0:
@@ -501,8 +508,10 @@ class DashboardWindow(QMainWindow):
                 new_idx = (r + 1) * cols + c
                 if new_idx < len(cards):
                     cards[new_idx].setFocus()
+                    self.scroll.ensureWidgetVisible(cards[new_idx], 50, 100)
                 else:
                     cards[-1].setFocus()
+                    self.scroll.ensureWidgetVisible(cards[-1], 50, 100)
 
     def keyPressEvent(self, event):
         # Active only in dashboard view
@@ -536,10 +545,11 @@ class DashboardWindow(QMainWindow):
                 return
 
             if focused not in cards and focused not in header_btns:
+                card_to_focus = cards[0]
                 if self.last_focused_card and self.last_focused_card in cards:
-                    self.last_focused_card.setFocus()
-                else:
-                    cards[0].setFocus()
+                    card_to_focus = self.last_focused_card
+                card_to_focus.setFocus()
+                self.scroll.ensureWidgetVisible(card_to_focus, 50, 100)
                 event.accept()
                 return
 
