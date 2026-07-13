@@ -267,7 +267,7 @@ class DashboardWindow(QMainWindow):
             QMessageBox.Yes | QMessageBox.No
         )
         if reply == QMessageBox.Yes:
-            subprocess.Popen(["xterm", "-e", "sudo reboot"])
+            self.run_in_system_terminal(["sudo", "reboot"])
 
     def handle_poweroff(self):
         reply = QMessageBox.question(
@@ -276,7 +276,36 @@ class DashboardWindow(QMainWindow):
             QMessageBox.Yes | QMessageBox.No
         )
         if reply == QMessageBox.Yes:
-            subprocess.Popen(["xterm", "-e", "sudo shutdown now"])
+            self.run_in_system_terminal(["sudo", "shutdown", "now"])
+
+    def run_in_system_terminal(self, cmd_args):
+        import shutil
+        terminals = [
+            "xterm",
+            "lxterminal",
+            "xfce4-terminal",
+            "konsole",
+            "mate-terminal",
+            "alacritty",
+            "kitty",
+            "urxvt",
+            "gnome-terminal"
+        ]
+        detected_term = None
+        for term in terminals:
+            if shutil.which(term):
+                detected_term = term
+                break
+                
+        if not detected_term:
+            # Fallback to direct execution if no terminal is found
+            subprocess.Popen(cmd_args)
+            return
+
+        if detected_term == "gnome-terminal":
+            subprocess.Popen([detected_term, "--"] + cmd_args)
+        else:
+            subprocess.Popen([detected_term, "-e"] + cmd_args)
 
     def handle_escape(self):
         # Back action via Escape shortcut
